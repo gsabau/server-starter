@@ -1,22 +1,20 @@
 # Server-Starter
 
-Zwei Module. FastAPI ist die Anwendung. Uvicorn ist der Prozess, der auf dem Port wartet. Eines ohne das andere reicht nicht: `python main.py` legt nur das App-Objekt an und beendet sich.
+HTTP-Anwendung mit einer Nachricht. Keine Datenbank. Der Speicher ist ein Dict und startet mit `{"id": 1, "text": "hello"}`.
 
-## Drei Schichten
+`main.py` verbindet drei Schichten. Jede kennt nur die darunter.
 
-Jede Schicht kennt nur die nächste darunter. `main.py` verbindet sie.
+| Schicht | Name | Datei |
+|---|---|---|
+| Daten | `MessageRepository` | `message_repository.py` |
+| Logik | `MessageService` | `message_service.py` |
+| Präsentation | `build_router` | `message_router.py` |
 
-| Schicht | Name | Datei | Aufgabe |
-|---|---|---|---|
-| Daten | `MessageRepository` | `message_repository.py` | Liest und schreibt. Das Dict ist die Datenbank. Start: eine Nachricht `hello`. |
-| Logik | `MessageService` | `message_service.py` | Holt die Daten über das Repository. Leerer Text ist ungültig. Fehlende Id ist ein Fehler. Kennt kein HTTP. |
-| Präsentation | `build_router` | `message_router.py` | Die FastAPI-Routen. Fragt den Service. Macht aus dem Ergebnis JSON und aus dem Fehler einen Status. |
+`Message` in `message.py` ist das Objekt zwischen den Schichten: `id` und `text`.
 
-`Message` in `message.py` ist das Objekt, das die Schichten weitergeben: `id` und `text`.
+Daten: `list_all`, `get`, `add`, `replace`, `remove`.
 
-Methoden der Daten: `list_all`, `get`, `add`, `replace`, `remove`.
-
-Methoden der Logik: `list_messages`, `get_message`, `create_message`, `update_message`, `delete_message`.
+Logik: `list_messages`, `get_message`, `create_message`, `update_message`, `delete_message`.
 
 Routen:
 
@@ -26,35 +24,32 @@ Routen:
 - `PUT /messages/{message_id}` mit `{"text": "..."}`
 - `DELETE /messages/{message_id}`
 
-## FastAPI
+## Requirements
 
-FastAPI ist das Python-Modul für die HTTP-Anwendung. In `main.py` steht `app = FastAPI()`. Die Routen stehen in `message_router.py`. Eine Route ist eine URL plus eine Funktion. `@router.get("/messages")` heißt: bei `GET /messages` die Liste holen.
+Python 3.14.
+
+Direkte Abhängigkeiten, Versionen aus der `.venv` dieses Projekts:
+
+- `fastapi` 0.142.2
+- `uvicorn` 0.54.0
+
+Die Namen stehen in `requirements.txt`.
+
+## Abhängigkeiten
+
+FastAPI ist die HTTP-Anwendung. In `main.py` steht `app = FastAPI()`. Die Routen stehen in `message_router.py`. Eine Route ist eine URL plus eine Funktion. `@router.get("/messages")` liefert die Liste.
 
 Die Funktion gibt ein Modell zurück. FastAPI macht daraus JSON. Die erste Nachricht ist `{"id": 1, "text": "hello"}`.
 
-FastAPI schreibt die OpenAPI-Beschreibung selbst: Pfad, Methode, JSON. Das ist keine zweite Datei zum Bearbeiten. Die Seite dafür ist `/docs`. Das Schema liegt unter `/openapi.json`.
+FastAPI schreibt die OpenAPI-Beschreibung selbst: Pfad, Methode, JSON. Das ist keine zweite Datei. Die Seite ist `/docs`. Das Schema liegt unter `/openapi.json`. Eine neue Route erscheint dort, sobald der Server sie geladen hat.
 
-Damit bleibt die Beschreibung an der Route. Eine neue Route erscheint in `/docs`, sobald der Server sie geladen hat.
+Uvicorn ist der Prozess, der Verbindungen annimmt. FastAPI öffnet keinen Port. `python main.py` legt nur das App-Objekt an und beendet sich. Uvicorn lädt `app` aus `main.py` und reicht jede Anfrage dorthin.
 
-## Uvicorn
+`uvicorn main:app --reload`: `main` ist die Datei `main.py`, `app` ist die Variable `app = FastAPI()`. `--reload` startet neu, wenn eine Datei gespeichert wird. Der Server hört auf `http://127.0.0.1:8000`.
 
-Uvicorn ist das Programm, das Verbindungen annimmt. FastAPI öffnet keinen Port. Uvicorn lädt `app` aus `main.py` und reicht jede Anfrage dorthin.
+## Setup
 
-```powershell
-uvicorn main:app --reload
-```
-
-`main` ist die Datei `main.py`. `app` ist die Variable `app = FastAPI()`. `--reload` startet neu, wenn du die Datei speicherst. Der Server hört auf `http://127.0.0.1:8000`.
-
-Das Terminal bleibt offen und zeigt den Start. **Strg+C** beendet den Prozess. Danach antwortet der Port nicht mehr.
-
-## Einrichten
-
-Alles in diesem Ordner. Einmalig.
-
-`python main.py` startet den Server nicht. Die Datei legt nur die Anwendung an und ist sofort fertig. Die Eingabezeile kommt zurück. Es läuft nichts.
-
-Zuerst die Umgebung und die Pakete. `uvicorn` gibt es erst danach. Ohne Installation meldet PowerShell, dass der Befehl `uvicorn` unbekannt ist.
+Die Pakete liegen in einer `.venv` in diesem Ordner, nicht im globalen Python. Einmalig:
 
 ```powershell
 python -m venv .venv
@@ -62,23 +57,23 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-Nach `Activate.ps1` steht `(.venv)` vor der Eingabezeile. Das ist das Python, in dem `uvicorn` liegt.
+Nach `Activate.ps1` steht `(.venv)` vor der Eingabezeile. Ohne diese Installation ist der Befehl `uvicorn` unbekannt.
 
-## Server starten
+## Start
 
 ```powershell
 uvicorn main:app --reload
 ```
 
-Der Server läuft, wenn das Terminal offen bleibt und `Uvicorn running on http://127.0.0.1:8000` zeigt. Die Eingabezeile kommt nicht zurück.
+Der Prozess läuft, wenn das Terminal offen bleibt und `Uvicorn running on http://127.0.0.1:8000` zeigt.
 
-Die Liste: [http://127.0.0.1:8000/messages](http://127.0.0.1:8000/messages). Dort steht die Nachricht `hello`.
+Liste: [http://127.0.0.1:8000/messages](http://127.0.0.1:8000/messages)
 
-Die Beschreibung: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
+Beschreibung: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
-## Server stoppen
+## Stop
 
-Im selben Terminal **Strg+C**. Die Eingabezeile kommt zurück. Die beiden Adressen antworten nicht mehr.
+Im selben Terminal **Strg+C**. Die Eingabezeile kommt zurück. Die Adressen antworten nicht mehr.
 
 ## Lizenz
 
