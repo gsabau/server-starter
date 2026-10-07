@@ -88,7 +88,7 @@ Nach `Activate.ps1` steht `(.venv)` vor der Eingabezeile. Ohne diese Installatio
 uvicorn main:app --reload
 ```
 
-Der Prozess läuft, wenn das Terminal offen bleibt und `Uvicorn running on http://127.0.0.1:8000` zeigt.
+Der Prozess läuft, wenn das Terminal offen bleibt und `Uvicorn running on http://127.0.0.1:8000` zeigt. Der Browser unter `http://127.0.0.1:5173` und `http://localhost:5173` darf die API aufrufen.
 
 ## OpenAPI
 
