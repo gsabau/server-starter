@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from app.fixtures import load_fixtures
 from app.games.repository import GameRepository
 from app.games.router import build_router as build_game_router
 from app.games.service import GameService
@@ -29,3 +30,5 @@ app.include_router(build_user_router(user_service))
 app.include_router(build_profile_router(profile_service))
 app.include_router(build_game_router(game_service))
 app.include_router(build_score_router(score_service))
+
+load_fixtures(user_service, profile_service, game_service)

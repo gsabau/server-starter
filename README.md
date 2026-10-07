@@ -14,13 +14,13 @@ Die Regeln stehen in `aufgabe.md`. Die gespeicherten Zeilen stehen in `app/domai
 
 `User` in `app/domain/models.py` ist das Objekt zwischen den Schichten: `id` und `name`. `Profile`, `Game` und `Score` sind die weiteren Zeilen.
 
-`POST /users` mit `{"name": "Ada"}` antwortet **201**:
+`GET /users` beginnt mit Ada. Das ist `UserResponse`:
 
 ```json
 {"id": 1, "name": "Ada"}
 ```
 
-Der Body ist `UserCreate`. Die Antwort ist `UserResponse`. Ein leerer Name ist **400**.
+Ein neues `POST /users` hängt an und bekommt die nächste Id. Der Body ist `UserCreate`. Ein leerer Name ist **400**.
 
 | Aufruf | Antwort |
 |---|---|
@@ -33,6 +33,21 @@ Der Body ist `UserCreate`. Die Antwort ist `UserResponse`. Ein leerer Name ist *
 | `GET /games/{game_id}` | Ein Spiel. Unbekannt: **404**. |
 | `POST /games/{game_id}/moves` | `GameResponse`. Der Zug ist nur `cell`. Das Zeichen kommt aus `next`. Beendet, Feld außerhalb 0–8 oder belegt: **400**. Am Ende ist `next` `null`, und es entstehen zwei Score-Zeilen. |
 | `GET /scores` | Liste von `ScoreHistoryResponse`. Gewonnen, verloren und unentschieden stehen in `result`. |
+
+## Testdaten
+
+Beim Start lädt `main.py` `load_fixtures` aus `app/fixtures.py` in dieselben Dicts. Keine Datei, keine Datenbank. Ein Neustart oder `--reload` wirft nachträglich angelegte Zeilen weg und lädt diese Ids wieder. `played_at` ist die Uhrzeit dieses Starts.
+
+| Id | Inhalt |
+|---|---|
+| User 1–4 | Ada, Ben, Cleo, Dan. Je ein Profil, `display_name` gleich dem Namen. |
+| Spiel 1 | Ada (X) gegen Ben (O). Laufend, Züge 0, 1, 4. `next` ist `"O"`. |
+| Spiel 2 | Cleo (X) gegen Dan (O). Leeres Brett, `in_progress`. |
+| Spiel 3 | Ada (X) gegen Cleo (O). `x_wins` auf 0, 4 und 8. Zwei Score-Zeilen, `win` und `loss`. |
+| Spiel 4 | Dan (X) gegen Ada (O). `o_wins`. Zwei Score-Zeilen. |
+| Spiel 5 | Ben (X) gegen Dan (O). Volles Brett, `draw`. Zwei Score-Zeilen. |
+
+`GET /users`, `GET /profiles`, `GET /games`, `GET /games/1` und `GET /scores` liefern diese Menge. Ein `POST` hängt dahinter an. Der nächste User ist die Id 5.
 
 ## Requirements
 
