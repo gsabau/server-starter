@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 
 # Request and response shapes. A dataclass, fields only.
-# The stored User lives in domain/models.py.
+# The stored rows live in app/domain/models.py.
 # A cell is "", "X", or "O". A board is nine cells, index 0 to 8, row by row.
 
 

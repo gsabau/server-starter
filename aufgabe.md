@@ -16,7 +16,7 @@ Ada (X) gewinnt. Die Zahlen in den Feldern sind die Indizes.
 
 ## Auftrag
 
-Dieselbe Architektur wie `POST /users`. Repository, Service, Router. Die DTOs sind schon in `dtos/dtos.py`. `User` steht in `domain/models.py`.
+Umgesetzt. Dieselbe Architektur wie `POST /users`. Repository, Service, Router, im Paket `app/`. Die JSON-Formen stehen in `app/schemas.py`. Die Zeilen stehen in `app/domain/models.py`.
 
 1. Profil anlegen und lesen. `POST /profiles` mit `ProfileCreate`. `GET /profiles`.
 2. User lesen. `GET /users`.

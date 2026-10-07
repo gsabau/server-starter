@@ -1,5 +1,5 @@
-from domain.models import User
-from user_repository import UserRepository
+from app.domain.models import User
+from app.users.repository import UserRepository
 
 
 class EmptyNameError(Exception):
@@ -16,3 +16,6 @@ class UserService:
         if not name.strip():
             raise EmptyNameError
         return self._repository.add(name.strip())
+
+    def list_users(self) -> list[User]:
+        return self._repository.list_all()

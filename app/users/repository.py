@@ -1,4 +1,4 @@
-from domain.models import User
+from app.domain.models import User
 
 
 class UserRepository:
@@ -13,3 +13,9 @@ class UserRepository:
         self._users[user.id] = user
         self._next_id += 1
         return user
+
+    def get(self, user_id: int) -> User | None:
+        return self._users.get(user_id)
+
+    def list_all(self) -> list[User]:
+        return list(self._users.values())
