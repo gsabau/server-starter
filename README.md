@@ -2,7 +2,7 @@
 
 Backend für Tic-Tac-Toe. Keine Datenbank. Der Speicher ist ein Dict. Zwei Personen, ein Browser. Der Client schickt beide User-Ids, wenn ein Spiel startet.
 
-Die Regeln stehen in `aufgabe.md`. Die gespeicherten Zeilen stehen in `app/domain/models.py`. Die JSON-Formen stehen in `app/schemas.py`.
+Die Regeln stehen in `aufgabe.md`. Der Weg für ein React-Frontend steht in `frontend.md`. Die gespeicherten Zeilen stehen in `app/domain/models.py`. Die JSON-Formen stehen in `app/schemas.py`.
 
 `main.py` verbindet drei Schichten. Jede kennt nur die darunter. Pro Ressource ein Paket unter `app/`.
 
