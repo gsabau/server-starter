@@ -1,6 +1,6 @@
 # Server-Starter
 
-Backend für Tic-Tac-Toe. Keine Datenbank. Der Speicher ist ein Dict. Zwei Personen, ein Browser. Der Client schickt beide User-Ids, wenn ein Spiel startet.
+Backend für Tic-Tac-Toe. Keine Datenbank. Der Speicher ist ein Dict. Zwei Personen, ein Browser. Die React-App spielt das Spiel selbst. Der Server speichert nur den Verlauf: ein fertiges Spiel pro Eintrag.
 
 Die Regeln stehen in `aufgabe.md`. Der Weg für ein React-Frontend steht in `frontend.md`. Die gespeicherten Zeilen stehen in `app/domain/models.py`. Die JSON-Formen stehen in `app/schemas.py`.
 
@@ -12,7 +12,7 @@ Die Regeln stehen in `aufgabe.md`. Der Weg für ein React-Frontend steht in `fro
 | Logik | `UserService` und die anderen Services | `app/*/service.py` |
 | Präsentation | `build_router` | `app/*/router.py` |
 
-`User` in `app/domain/models.py` ist das Objekt zwischen den Schichten: `id` und `name`. `Profile`, `Game` und `Score` sind die weiteren Zeilen.
+`User` in `app/domain/models.py` ist das Objekt zwischen den Schichten: `id` und `name`. `Profile` und `GameHistory` sind die weiteren Zeilen.
 
 `GET /users` beginnt mit Ada. Das ist `UserResponse`:
 
@@ -28,26 +28,44 @@ Ein neues `POST /users` hängt an und bekommt die nächste Id. Der Body ist `Use
 | `GET /users` | Liste von `UserResponse`. |
 | `POST /profiles` | **201** `ProfileResponse`. Unbekannter User: **404**. Zweites Profil: **400**. |
 | `GET /profiles` | Liste von `ProfileResponse`. |
-| `POST /games` | **201** `GameResponse`. Leeres Brett, `next` ist `"X"`, `status` ist `in_progress`. Gleicher User oder unbekannter User: **400** bzw. **404**. |
-| `GET /games` | Liste von `GameResponse`. |
-| `GET /games/{game_id}` | Ein Spiel. Unbekannt: **404**. |
-| `POST /games/{game_id}/moves` | `GameResponse`. Der Zug ist nur `cell`. Das Zeichen kommt aus `next`. Beendet, Feld außerhalb 0–8 oder belegt: **400**. Am Ende ist `next` `null`, und es entstehen zwei Score-Zeilen. |
-| `GET /scores` | Liste von `ScoreHistoryResponse`. Gewonnen, verloren und unentschieden stehen in `result`. |
+| `POST /game-histories` | **201** `GameHistoryResponse`. Der Body ist `GameHistoryCreate`, ohne `id`. Ungültiger Eintrag: **400**. |
+| `GET /game-histories` | Liste von `GameHistoryResponse`. |
+| `GET /game-histories/{history_id}` | Ein Eintrag. Unbekannt: **404**. |
+
+Ein Eintrag ist ein fertiges Spiel:
+
+```json
+{
+  "id": "1",
+  "player_a": "Ada",
+  "player_b": "Cleo",
+  "game": ["X", "O", "O", "", "X", "", "", "", "X"],
+  "winner": "Ada"
+}
+```
+
+| Feld | Bedeutung |
+|---|---|
+| `id` | Text. Vergibt der Server: `"1"`, `"2"`, … Der Client schickt sie nicht. |
+| `player_a` | Name der Person mit X |
+| `player_b` | Name der Person mit O |
+| `game` | Neun Strings, Zeile für Zeile. Die ersten drei sind die erste Zeile. Ein Feld ist `""`, `"X"` oder `"O"`. |
+| `winner` | Name von `player_a` oder `player_b`, oder `"draw"` |
+
+**400**, wenn ein Name leer ist, beide Namen gleich sind, `game` nicht neun Felder hat, ein Feld ungültig ist oder `winner` weder ein Spieler noch `"draw"` ist. Die Meldung steht in `detail`.
 
 ## Testdaten
 
-Beim Start lädt `main.py` `load_fixtures` aus `app/fixtures.py` in dieselben Dicts. Keine Datei, keine Datenbank. Ein Neustart oder `--reload` wirft nachträglich angelegte Zeilen weg und lädt diese Ids wieder. `played_at` ist die Uhrzeit dieses Starts.
+Beim Start lädt `main.py` `load_fixtures` aus `app/fixtures.py` in dieselben Dicts. Keine Datei, keine Datenbank. Ein Neustart oder `--reload` wirft nachträglich angelegte Zeilen weg und lädt diese Ids wieder.
 
 | Id | Inhalt |
 |---|---|
 | User 1–4 | Ada, Ben, Cleo, Dan. Je ein Profil, `display_name` gleich dem Namen. |
-| Spiel 1 | Ada (X) gegen Ben (O). Laufend, Züge 0, 1, 4. `next` ist `"O"`. |
-| Spiel 2 | Cleo (X) gegen Dan (O). Leeres Brett, `in_progress`. |
-| Spiel 3 | Ada (X) gegen Cleo (O). `x_wins` auf 0, 4 und 8. Zwei Score-Zeilen, `win` und `loss`. |
-| Spiel 4 | Dan (X) gegen Ada (O). `o_wins`. Zwei Score-Zeilen. |
-| Spiel 5 | Ben (X) gegen Dan (O). Volles Brett, `draw`. Zwei Score-Zeilen. |
+| Verlauf `"1"` | Ada (X) gegen Cleo (O). X gewinnt auf 0, 4 und 8. `winner` ist `"Ada"`. |
+| Verlauf `"2"` | Dan (X) gegen Ada (O). O gewinnt auf 2, 4 und 6. `winner` ist `"Ada"`. |
+| Verlauf `"3"` | Ben (X) gegen Dan (O). Volles Brett, keine Linie. `winner` ist `"draw"`. |
 
-`GET /users`, `GET /profiles`, `GET /games`, `GET /games/1` und `GET /scores` liefern diese Menge. Ein `POST` hängt dahinter an. Der nächste User ist die Id 5.
+`GET /users`, `GET /profiles`, `GET /game-histories` und `GET /game-histories/1` liefern diese Menge. Ein `POST` hängt dahinter an. Der nächste User ist die Id 5, der nächste Verlauf die Id `"4"`.
 
 ## Requirements
 
@@ -65,6 +83,25 @@ Die Namen stehen in `requirements.txt`.
 FastAPI ist die HTTP-Anwendung. In `main.py` steht `app = FastAPI()`. Die Routen stehen in `app/*/router.py`. `@router.post` nimmt eine Form aus `app/schemas.py` und gibt eine zurück. FastAPI macht daraus JSON.
 
 FastAPI schreibt die OpenAPI-Beschreibung selbst: Pfad, Methode, JSON. Das ist keine zweite Datei. Die Seite ist `/docs`. Das Schema liegt unter `/openapi.json`.
+
+Die Texte dazu stehen im Code, nicht in einer eigenen Datei. In `app/schemas.py` hat jedes Feld eine Beschreibung und ein Beispiel:
+
+```python
+from typing import Annotated
+from pydantic import Field
+
+@dataclass
+class UserCreate:
+    """Body für einen neuen Account. Die `id` vergibt der Server."""
+
+    name: Annotated[str, Field(description="Name des neuen Accounts. Pflicht.", examples=["Ada"])]
+```
+
+- Das Docstring der Klasse wird zur Beschreibung des ganzen Schemas.
+- `Field(description=...)` beschreibt ein Feld. `examples=[...]` ist das Beispiel, das `/docs` im Body vorbelegt.
+- `Path(description=...)` beschreibt einen Pfad-Parameter, hier `history_id` in `app/game_histories/router.py`.
+- Der Generator übernimmt die Texte als Kommentare in `client-node`.
+- Ein neues Feld braucht immer eine Beschreibung und ein Beispiel.
 
 Uvicorn ist der Prozess, der Verbindungen annimmt. FastAPI öffnet keinen Port. `python main.py` legt nur das App-Objekt an und beendet sich. Uvicorn lädt `app` aus `main.py` und reicht jede Anfrage dorthin.
 
@@ -88,13 +125,46 @@ Nach `Activate.ps1` steht `(.venv)` vor der Eingabezeile. Ohne diese Installatio
 uvicorn main:app --reload
 ```
 
-Der Prozess läuft, wenn das Terminal offen bleibt und `Uvicorn running on http://127.0.0.1:8000` zeigt. Der Browser unter `http://127.0.0.1:5173` und `http://localhost:5173` darf die API aufrufen.
+Der Prozess läuft, wenn das Terminal offen bleibt und `Uvicorn running on http://127.0.0.1:8000` zeigt. Der Browser unter `http://127.0.0.1:5173` und `http://localhost:5173` darf die API aufrufen. Läuft deine App unter einer anderen Adresse, lies den Abschnitt CORS.
+
+## CORS
+
+Der Browser lässt eine Seite nur dann die API einer anderen Adresse aufrufen, wenn der Server das erlaubt. Das ist CORS. Eine Adresse ist Schema, Host und Port zusammen. `http://localhost:5173` und `http://127.0.0.1:5173` sind zwei verschiedene Adressen. Die Erlaubnis steht in `main.py`:
+
+```python
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://127.0.0.1:5173", "http://localhost:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+```
+
+Auf deinem Rechner musst du die Liste vielleicht ändern:
+
+| Situation | Was tun |
+|---|---|
+| Vite meldet `Local: http://localhost:5174`, weil 5173 belegt ist | `"http://localhost:5174"` in die Liste |
+| Du öffnest die App über `http://127.0.0.1:...` statt `localhost` | die passende Adresse eintragen |
+| Die React-App läuft auf einem anderen Port, zum Beispiel 3000 | `"http://localhost:3000"` eintragen |
+| Du rufst die App von einem anderen Rechner auf | `"http://<Adresse-des-Rechners>:5173"` eintragen |
+
+Kein Schrägstrich am Ende, kein Pfad: `"http://localhost:5174"`, nicht `"http://localhost:5174/"`. Nach dem Speichern lädt `--reload` den Server neu.
+
+So erkennst du ein CORS-Problem:
+- In der Browser-Konsole (F12) steht `blocked by CORS policy: No 'Access-Control-Allow-Origin' header`.
+- Die React-App meldet `Network Error` und zeigt keine Daten. Im Server-Terminal steht entweder `OPTIONS ... 400 Bad Request` (die Vorab-Anfrage des Browsers bei `POST`) oder ein `200 OK`, das die App trotzdem nicht bekommt.
+- `/docs` und `curl` funktionieren trotzdem. Beide laufen nicht im Browser unter einer fremden Adresse.
+
+Das ist kein Fehler in der API und auch keiner im Client. Ein `"*"` in `allow_origins` erlaubt jede Adresse. Das geht lokal zum Üben, in einer echten Anwendung nicht.
+
+Die Basis-Adresse des Servers steht im Client: `new Configuration({ basePath: "http://127.0.0.1:8000" })`. Läuft uvicorn auf einem anderen Port (`--port 8001`), ändere sie dort.
 
 ## OpenAPI
 
 FastAPI schreibt die Beschreibung beim Start. Im Projektordner liegt keine OpenAPI-Datei.
 
-Die Seite zum Lesen und Ausprobieren ist [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs). Dort stehen Users, Profiles, Games und Scores. Die Adresse `/` hat keine Route.
+Die Seite zum Lesen und Ausprobieren ist [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs). Dort stehen Users, Profiles und Game-Histories. Die Adresse `/` hat keine Route.
 
 Die Datei selbst ist [http://127.0.0.1:8000/openapi.json](http://127.0.0.1:8000/openapi.json). Das Format ist OpenAPI 3.1. Im Browser öffnen oder speichern, während der Server läuft:
 

@@ -1,25 +1,24 @@
 # Frontend
 
-Zwei Personen, ein Browser. Die Seite zeigt die Spieler, startet ein Spiel, zeichnet das Brett und schickt jeden Klick als Zug. Der Server entscheidet das Zeichen, den Sieg und die Score-Zeilen.
+Zwei Personen, ein Browser. Die Seite zeigt die Spieler, zeichnet das Brett und erkennt selbst, wer gewinnt. Der Server entscheidet nichts im Spiel. Er speichert nur das fertige Spiel als Verlauf.
 
-Der Server hört auf `http://127.0.0.1:8000`. Die React-App hört auf `http://127.0.0.1:5173` oder `http://localhost:5173`. Diese Origins darf der Browser aufrufen. `../client-starter` zeigt schon die User-Liste. Dort das Spiel weiterbauen.
+Der Server hört auf `http://127.0.0.1:8000`. Die React-App hört auf `http://127.0.0.1:5173` oder `http://localhost:5173`. Diese Origins darf der Browser aufrufen. Läuft deine App woanders (Vite nimmt 5174, wenn 5173 belegt ist), trag die Adresse in `main.py` bei `allow_origins` ein. Siehe Abschnitt CORS unten. `../client-starter` zeigt schon die User-Liste und das lokale Brett. Dort das Spiel weiterbauen.
 
-Die Beschreibung zum Ausprobieren ist [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs). Die Datei dazu ist [http://127.0.0.1:8000/openapi.json](http://127.0.0.1:8000/openapi.json). Im Ordner der React-App:
+Die Beschreibung zum Ausprobieren ist [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs). Dort steht zu jedem Feld, was es bedeutet, mit einem Beispiel. Die Texte stehen in `app/schemas.py` und landen auch als Kommentare im generierten Client. Die Datei dazu ist [http://127.0.0.1:8000/openapi.json](http://127.0.0.1:8000/openapi.json). Im Ordner der React-App:
 
 ```powershell
 npx @openapitools/openapi-generator-cli generate -i http://127.0.0.1:8000/openapi.json -g typescript-axios -o client-node
 ```
 
-Node.js und Java. `axios` ist eine Abhängigkeit der App. Eine `Configuration` für alle vier Klassen:
+Node.js und Java. `axios` ist eine Abhängigkeit der App. Eine `Configuration` für alle drei Klassen:
 
 ```typescript
-import { Configuration, GamesApi, ProfilesApi, ScoresApi, UsersApi } from "./client-node";
+import { Configuration, GameHistoriesApi, ProfilesApi, UsersApi } from "./client-node";
 
 const config = new Configuration({ basePath: "http://127.0.0.1:8000" });
 const users = new UsersApi(config);
 const profiles = new ProfilesApi(config);
-const games = new GamesApi(config);
-const scores = new ScoresApi(config);
+const histories = new GameHistoriesApi(config);
 ```
 
 ## Wo welcher Aufruf hingehört
@@ -27,14 +26,13 @@ const scores = new ScoresApi(config);
 | Moment | Aufruf | Danach |
 |---|---|---|
 | Seite öffnet, Sitzplätze | `GET /users`, `GET /profiles` | Namen an die beiden Plätze X und O |
-| Jemand ist neu | `POST /users`, dann `POST /profiles` | Die neue Id an einen Platz |
-| Liste der Partien, Lobby | `GET /games` | Laufende und beendete Bretter |
-| Partie öffnen | `GET /games/{game_id}` | Neun Felder zeichnen |
-| Neue Partie | `POST /games` | Die Antwort ist das leere Brett. Diese `id` öffnen |
-| Klick auf ein leeres Feld | `POST /games/{game_id}/moves` | Die Antwort ersetzt das Brett. Kein zweites Laden nötig |
-| Partie zu Ende, Verlauf | `GET /scores` | Zwei neue Zeilen. Siege sind die Zeilen mit `result` `"win"` |
+| Jemand ist neu | `POST /users`, dann `POST /profiles` | Der neue Name an einen Platz |
+| Klick auf ein leeres Feld | kein Aufruf | Die Seite setzt das Zeichen selbst |
+| Partie zu Ende | `POST /game-histories` | Die Antwort ist der gespeicherte Eintrag mit `id` |
+| Lobby, Verlauf | `GET /game-histories` | Liste der fertigen Spiele |
+| Ein Spiel nachschauen | `GET /game-histories/{history_id}` | Brett aus `game` zeichnen |
 
-Ein Zug schickt keine User-Id und kein `"X"` oder `"O"`. Der Server setzt, wen `next` nennt. Beide Personen klicken im selben Fenster. Die Seite zeigt nur an, wer dran ist.
+Ein Zug geht nicht an den Server. Beide Personen klicken im selben Fenster. Die Seite zeigt an, wer dran ist, und prüft nach jedem Klick auf eine Linie oder ein volles Brett.
 
 ## Spiel
 
@@ -49,38 +47,13 @@ Ein Zug schickt keine User-Id und kein `"X"` oder `"O"`. Der Server setzt, wen `
 | 3 | Cleo | Cleo |
 | 4 | Dan | Dan |
 
-Die Seite merkt sich zwei Ids. Eine ist X, eine ist O. Sie müssen verschieden sein.
+Die Seite merkt sich zwei Namen. Einer spielt X, einer spielt O. Sie müssen verschieden sein, sonst weist der Server den Verlauf ab.
 
 Ein neuer Mensch: zuerst `POST /users` mit `{ "name": "Eve" }`. Die Antwort ist `{"id": 5, "name": "Eve"}`. Danach `POST /profiles` mit `{ "user_id": 5, "display_name": "Eve" }`. Ohne Profil gibt es den Menschen trotzdem. Das Profil ist nur der angezeigte Name. Ein zweites Profil für dieselbe Id ist **400**.
 
-### Partie starten
-
-`POST /games` mit den beiden Ids:
-
-```json
-{"player_x_user_id": 1, "player_o_user_id": 2}
-```
-
-**201.** Die Antwort ist das Brett, auf dem sofort gespielt wird:
-
-```json
-{
-  "id": 6,
-  "board": ["", "", "", "", "", "", "", "", ""],
-  "next": "X",
-  "status": "in_progress",
-  "player_x_user_id": 1,
-  "player_o_user_id": 2
-}
-```
-
-`id` 6, weil 1 bis 5 schon aus den Testdaten stammen. X beginnt. Beide Ids müssen existieren.
-
-Wer nicht neu anlegen will, öffnet Spiel 2. Cleo ist X, Dan ist O, das Brett ist leer.
-
 ### Brett
 
-`GET /games/{game_id}` oder die Antwort von `POST /games`. Neun Felder, Zeile für Zeile:
+Neun Felder, Zeile für Zeile. Das ist auch die Reihenfolge im Array `game`:
 
 ```
 0 1 2
@@ -88,71 +61,74 @@ Wer nicht neu anlegen will, öffnet Spiel 2. Cleo ist X, Dan ist O, das Brett is
 6 7 8
 ```
 
-Ein Feld ist `""`, `"X"` oder `"O"`. `player_x_user_id` ist der Mensch hinter X, `player_o_user_id` hinter O. Die Namen kommen aus `GET /users` oder `GET /profiles`.
+Ein Feld ist `""`, `"X"` oder `"O"`. Die ersten drei Einträge sind die erste Zeile. `player_a` ist der Mensch hinter X, `player_b` hinter O.
 
-`next` ist `"X"` oder `"O"`, solange `status` `in_progress` ist. Die Seite schreibt darüber, wer dran ist. Leere Felder sind klickbar. Belegte nicht.
+Linien, die gewinnen: drei Zeilen (`0 1 2`, `3 4 5`, `6 7 8`), drei Spalten (`0 3 6`, `1 4 7`, `2 5 8`) und zwei Diagonalen (`0 4 8`, `2 4 6`). Ein volles Brett ohne Linie ist ein Unentschieden.
 
-Spiel 1 ist mitten in der Partie. Ada ist X, Ben ist O, O ist dran:
+### Verlauf speichern
+
+Wenn die Partie zu Ende ist: `POST /game-histories`. Ada (X) hat gegen Cleo (O) auf der Diagonale 0, 4, 8 gewonnen:
 
 ```json
 {
-  "id": 1,
-  "board": ["X", "O", "", "", "X", "", "", "", ""],
-  "next": "O",
-  "status": "in_progress",
-  "player_x_user_id": 1,
-  "player_o_user_id": 2
+  "player_a": "Ada",
+  "player_b": "Cleo",
+  "game": ["X", "O", "O", "", "X", "", "", "", "X"],
+  "winner": "Ada"
 }
 ```
 
-`status` ist `in_progress`, `x_wins`, `o_wins` oder `draw`. Bei den letzten drei ist `next` `null`. Keine Felder mehr klickbar. Spiel 3 ist ein Sieg von X, Spiel 4 ein Sieg von O, Spiel 5 unentschieden.
-
-### Zug
-
-Klick auf Feld `cell`. Nur diese Zahl geht an den Server:
+**201.** Die Antwort ist derselbe Eintrag mit der `id`, die der Server vergibt:
 
 ```json
-{"cell": 0}
+{
+  "id": "4",
+  "player_a": "Ada",
+  "player_b": "Cleo",
+  "game": ["X", "O", "O", "", "X", "", "", "", "X"],
+  "winner": "Ada"
+}
 ```
 
-`POST /games/2/moves`. Die Antwort ist das ganze Brett nach dem Zug. Feld 0 ist `"X"`, `next` ist `"O"`. Diese JSON zeichnet die Seite neu. Sie ruft `GET /games/2` dafür nicht noch einmal auf.
+`id` ist `"4"`, weil `"1"` bis `"3"` schon aus den Testdaten stammen. Ein Unentschieden schickt `"winner": "draw"`.
 
-Der nächste Klick, zum Beispiel Feld 4, ist wieder nur `{ "cell": 4 }`. Der Server setzt `"O"`, weil `next` jetzt `"O"` war. So geht es weiter, abwechselnd, im selben Fenster.
+Die Seite schickt keine `id`. Wer sie trotzdem mitschickt, wird nicht abgewiesen, der Server ignoriert sie.
 
-Drei Fälle beenden die Partie. Drei gleiche Zeichen in einer Zeile, einer Spalte oder einer Diagonale: `status` wird `x_wins` oder `o_wins`. Ein volles Brett ohne Linie: `status` wird `draw`. Dann ist `next` `null`, und der Server schreibt zwei Score-Zeilen. Die Zug-Antwort enthält das Brett, nicht die Score-Zeilen.
+### Verlauf lesen
 
-Ein Zug auf ein beendetes Spiel, auf ein Feld außerhalb 0–8 oder auf ein belegtes Feld ist **400**. Das Brett bleibt, wie es war.
-
-### Verlauf
-
-Nach einem Ende, und wenn die Lobby die Siege zeigt: `GET /scores`. Ein beendetes Spiel hat zwei Zeilen, eine pro Person. Dieselbe `played_at`, dieselbe `game_id`.
-
-Spiel 3, Ada (X) hat gegen Cleo gewonnen. Die ersten beiden Zeilen nach dem Start:
+`GET /game-histories` liefert alle fertigen Spiele. Nach dem Start sind es drei:
 
 ```json
 [
   {
-    "id": 1,
-    "game_id": 3,
-    "user_id": 1,
-    "opponent_user_id": 3,
-    "result": "win",
-    "played_at": "2026-10-07T09:00:00+00:00"
+    "id": "1",
+    "player_a": "Ada",
+    "player_b": "Cleo",
+    "game": ["X", "O", "O", "", "X", "", "", "", "X"],
+    "winner": "Ada"
   },
   {
-    "id": 2,
-    "game_id": 3,
-    "user_id": 3,
-    "opponent_user_id": 1,
-    "result": "loss",
-    "played_at": "2026-10-07T09:00:00+00:00"
+    "id": "2",
+    "player_a": "Dan",
+    "player_b": "Ada",
+    "game": ["X", "X", "O", "X", "O", "", "O", "", ""],
+    "winner": "Ada"
+  },
+  {
+    "id": "3",
+    "player_a": "Ben",
+    "player_b": "Dan",
+    "game": ["X", "O", "X", "X", "O", "O", "O", "X", "X"],
+    "winner": "draw"
   }
 ]
 ```
 
-`result` ist `win`, `loss` oder `draw`. `played_at` ist die Uhrzeit des Serverstarts, ISO-Format. Siege von Ada sind die Zeilen mit `user_id` 1 und `result` `"win"`. Es gibt keinen zweiten Aufruf dafür.
+Siege von Ada sind die Einträge mit `"winner": "Ada"`. Es gibt keinen zweiten Aufruf dafür, die Seite zählt selbst.
 
-Spiele 3, 4 und 5 sind schon zu Ende. `GET /scores` liefert dafür sechs Zeilen, bevor jemand selbst spielt.
+### Wenn der Browser die Antwort blockt (CORS)
+
+Die App meldet `Network Error`, in der Browser-Konsole (F12) steht `blocked by CORS policy`. `/docs` und `curl` funktionieren trotzdem. Dann kennt der Server die Adresse deiner App nicht. Trag sie in `main.py` bei `allow_origins` ein, zum Beispiel `"http://localhost:5174"`, wenn Vite den Port 5174 nimmt. Schema, Host und Port müssen genau stimmen, ohne Schrägstrich am Ende. `localhost` und `127.0.0.1` zählen als verschiedene Adressen. Die ausführliche Tabelle steht in `README.md` im Abschnitt CORS.
 
 ## Endpoints
 
@@ -190,66 +166,51 @@ Body `ProfileCreate`: `user_id`, `display_name`.
 
 **400.** `Profile already exists`.
 
-### `GET /games`
+### `POST /game-histories`
 
-Lobby. `games.listGamesGamesGet()`.
+Fertiges Spiel speichern. `histories.createHistoryGameHistoriesPost({ player_a, player_b, game, winner })`.
 
-**200.** Liste von `GameResponse`. Felder unten bei `GET /games/{game_id}`.
-
-### `POST /games`
-
-Neue Partie, nachdem zwei verschiedene User sitzen. `games.createGameGamesPost({ player_x_user_id, player_o_user_id })`.
-
-Body `GameCreate`: `player_x_user_id`, `player_o_user_id`.
-
-**201.** `GameResponse`. Leeres Brett, `next` ist `"X"`, `status` ist `in_progress`.
-
-**400.** `Users must differ`.
-
-**404.** `User not found`.
-
-### `GET /games/{game_id}`
-
-Partie öffnen. `games.getGameGamesGameIdGet(gameId)`.
-
-**200.** `GameResponse`:
+Body `GameHistoryCreate`:
 
 | Feld | Bedeutung |
 |---|---|
-| `id` | Partie |
-| `board` | Neun Strings, Index 0–8. `""`, `"X"` oder `"O"` |
-| `next` | `"X"` oder `"O"`. `null`, wenn die Partie zu Ende ist |
-| `status` | `in_progress`, `x_wins`, `o_wins`, `draw` |
-| `player_x_user_id` | User, der X spielt |
-| `player_o_user_id` | User, der O spielt |
+| `player_a` | Name der Person mit X |
+| `player_b` | Name der Person mit O |
+| `game` | Neun Strings, Index 0–8. `""`, `"X"` oder `"O"` |
+| `winner` | Name von `player_a` oder `player_b`, oder `"draw"` |
 
-**404.** `Game not found`.
+**201.** `GameHistoryResponse`: dieselben Felder plus `id` (Text).
 
-### `POST /games/{game_id}/moves`
+**400.** Die Meldung steht in `detail`:
 
-Klick auf ein Feld. `games.moveGamesGameIdMovesPost(gameId, { cell })`.
+| `detail` | Wann |
+|---|---|
+| `Player name is empty` | `player_a` oder `player_b` leer oder nur Leerzeichen |
+| `Players must differ` | beide Namen gleich |
+| `Game must have nine cells` | `game` hat nicht genau neun Einträge |
+| `Cell must be empty, X, or O` | ein Feld ist etwas anderes |
+| `Winner must be a player or draw` | `winner` ist weder `player_a` noch `player_b` noch `"draw"` |
 
-Body `MoveCreate`: nur `cell`, eine Zahl 0–8.
+**422.** Ein Feld fehlt oder hat den falschen Typ. Das prüft FastAPI vor dem Service.
 
-**200.** `GameResponse`, das Brett nach dem Zug. Bei Sieg oder Remis ist `next` `null`. Zwei Score-Zeilen entstehen dabei, stehen aber in `GET /scores`.
+### `GET /game-histories`
 
-**400.** `Game is over`, `Cell is out of range`, `Cell is taken`.
+Verlauf, Lobby. `histories.listHistoriesGameHistoriesGet()`.
 
-**404.** `Game not found`.
+**200.** Liste von `GameHistoryResponse`.
 
-### `GET /scores`
+### `GET /game-histories/{history_id}`
 
-Verlauf, nachdem eine Partie `in_progress` verlassen hat. Auch für die Siegeszahl in der Lobby. `scores.listScoresScoresGet()`.
+Ein fertiges Spiel nachschauen. `histories.getHistoryGameHistoriesHistoryIdGet(historyId)`.
 
-**200.** Liste von `ScoreHistoryResponse`:
+**200.** `GameHistoryResponse`:
 
 | Feld | Bedeutung |
 |---|---|
-| `id` | Zeile |
-| `game_id` | Partie. Zwei Zeilen teilen sich diese Id |
-| `user_id` | Diese Person |
-| `opponent_user_id` | Die andere Person |
-| `result` | `win`, `loss` oder `draw` |
-| `played_at` | ISO-Zeitpunkt. Beide Zeilen einer Partie gleich |
+| `id` | Eintrag, als Text |
+| `player_a` | Name der Person mit X |
+| `player_b` | Name der Person mit O |
+| `game` | Neun Strings, Index 0–8. `""`, `"X"` oder `"O"` |
+| `winner` | Name des Siegers oder `"draw"` |
 
-Ein Sieg von X schreibt `win` für `player_x_user_id` und `loss` für `player_o_user_id`. Ein Sieg von O ist umgekehrt. Ein Remis schreibt zweimal `draw`.
+**404.** `Game history not found`.

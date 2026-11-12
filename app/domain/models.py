@@ -21,25 +21,13 @@ class Profile:
 
 
 @dataclass
-class Game:
-    # Board of nine cells, index 0 to 8, row by row. A cell is "", "X", or "O".
-    # next is "X" or "O", or None when the game is over.
-    # status is in_progress, x_wins, o_wins, or draw.
-    id: int
-    board: list[str]
-    next: str | None
-    status: str
-    player_x_user_id: int
-    player_o_user_id: int
-
-
-@dataclass
-class Score:
-    # One finished game for one user. A game writes two rows, one per player.
-    # result is win, loss, or draw.
-    id: int
-    game_id: int
-    user_id: int
-    opponent_user_id: int
-    result: str
-    played_at: str
+class GameHistory:
+    # One finished game, as the client reports it.
+    # game is nine cells, index 0 to 8, row by row. A cell is "", "X", or "O".
+    # player_a plays X, player_b plays O.
+    # winner is the name of player_a or player_b, or "draw".
+    id: str
+    player_a: str
+    player_b: str
+    game: list[str]
+    winner: str

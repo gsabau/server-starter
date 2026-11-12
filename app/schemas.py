@@ -1,71 +1,167 @@
 from dataclasses import dataclass
+from typing import Annotated
+
+from pydantic import Field
 
 
 # Request and response shapes. A dataclass, fields only.
 # The stored rows live in app/domain/models.py.
-# A cell is "", "X", or "O". A board is nine cells, index 0 to 8, row by row.
+# Every field carries Annotated[..., Field(description=..., examples=[...])].
+# FastAPI copies the text into /openapi.json and shows it on /docs.
+# The class docstring becomes the description of the whole schema.
+# A cell is "", "X", or "O". A game is nine cells, index 0 to 8, row by row.
 
 
 @dataclass
 class UserCreate:
-    # Body for a new account. The client does not send the id.
-    name: str
+    """Body für einen neuen Account. Die `id` schickt der Client nicht, sie vergibt der Server."""
+
+    name: Annotated[
+        str,
+        Field(
+            description="Name des neuen Accounts. Pflicht. Ein leerer Name oder nur Leerzeichen ist ungültig (400). Leerzeichen am Rand werden entfernt.",
+            examples=["Ada"],
+        ),
+    ]
 
 
 @dataclass
 class UserResponse:
-    # Account returned to the client.
-    id: int
-    name: str
+    """Ein Account, wie ihn der Server zurückgibt."""
+
+    id: Annotated[
+        int,
+        Field(
+            description="Eindeutige Id des Accounts. Vergibt der Server, die erste Id ist 1. Im Profil heißt sie `user_id`.",
+            examples=[1],
+        ),
+    ]
+    name: Annotated[
+        str,
+        Field(
+            description="Name des Accounts, ohne Leerzeichen am Rand.",
+            examples=["Ada"],
+        ),
+    ]
 
 
 @dataclass
 class ProfileCreate:
-    # Public face. One profile per user.
-    user_id: int
-    display_name: str
+    """Body für ein neues Profil. Ein Profil ist der öffentliche Anzeigename eines Accounts."""
+
+    user_id: Annotated[
+        int,
+        Field(
+            description="Id eines vorhandenen Accounts (`id` aus `/users`). Unbekannte Id: 404. Pro Account gibt es genau ein Profil, ein zweites ist ungültig (400).",
+            examples=[1],
+        ),
+    ]
+    display_name: Annotated[
+        str,
+        Field(
+            description="Name, den die App am Sitzplatz anzeigt. Muss nicht dem Account-Namen entsprechen.",
+            examples=["Ada"],
+        ),
+    ]
 
 
 @dataclass
 class ProfileResponse:
-    # Profile returned to the client.
-    id: int
-    user_id: int
-    display_name: str
+    """Ein Profil, wie es der Server zurückgibt."""
+
+    id: Annotated[
+        int,
+        Field(
+            description="Eindeutige Id des Profils. Vergibt der Server.",
+            examples=[1],
+        ),
+    ]
+    user_id: Annotated[
+        int,
+        Field(
+            description="Id des Accounts, zu dem das Profil gehört (`id` aus `/users`).",
+            examples=[1],
+        ),
+    ]
+    display_name: Annotated[
+        str,
+        Field(
+            description="Name, den die App am Sitzplatz anzeigt.",
+            examples=["Ada"],
+        ),
+    ]
 
 
 @dataclass
-class GameCreate:
-    # Seats two different users in one browser. The client sends both ids.
-    player_x_user_id: int
-    player_o_user_id: int
+class GameHistoryCreate:
+    """Body für ein fertiges Spiel. Die App spielt selbst und meldet nur das Ergebnis. Die `id` schickt der Client nicht, sie vergibt der Server."""
+
+    player_a: Annotated[
+        str,
+        Field(
+            description="Name der Person, die X spielt und beginnt. Nicht leer und verschieden von `player_b` (sonst 400). Leerzeichen am Rand werden entfernt.",
+            examples=["Ada"],
+        ),
+    ]
+    player_b: Annotated[
+        str,
+        Field(
+            description="Name der Person, die O spielt. Nicht leer und verschieden von `player_a` (sonst 400). Leerzeichen am Rand werden entfernt.",
+            examples=["Cleo"],
+        ),
+    ]
+    game: Annotated[
+        list[str],
+        Field(
+            description='Das ganze Brett am Ende des Spiels, genau neun Felder, Zeile für Zeile: Index 0 bis 2 ist die erste Zeile, 3 bis 5 die zweite, 6 bis 8 die dritte. Ein Feld ist "" (leer), "X" oder "O". Andere Länge oder anderer Wert: 400.',
+            examples=[["X", "O", "O", "", "X", "", "", "", "X"]],
+        ),
+    ]
+    winner: Annotated[
+        str,
+        Field(
+            description='Name des Siegers. Genau `player_a` oder `player_b`. Bei einem Unentschieden der Text "draw". Alles andere: 400.',
+            examples=["Ada"],
+        ),
+    ]
 
 
 @dataclass
-class GameResponse:
-    # Board the client draws. next is "X" or "O", or None when the game is over.
-    # status is in_progress, x_wins, o_wins, or draw.
-    id: int
-    board: list[str]
-    next: str | None
-    status: str
-    player_x_user_id: int
-    player_o_user_id: int
+class GameHistoryResponse:
+    """Ein fertiges Spiel, wie es der Server gespeichert hat."""
 
-
-@dataclass
-class MoveCreate:
-    # One mark. cell is 0 to 8. The mark is whoever next says, not a field here.
-    cell: int
-
-
-@dataclass
-class ScoreHistoryResponse:
-    # One finished game for one user. A game writes two rows, one per player.
-    # result is win, loss, or draw. Wins are counted from these rows.
-    id: int
-    game_id: int
-    user_id: int
-    opponent_user_id: int
-    result: str
-    played_at: str
+    id: Annotated[
+        str,
+        Field(
+            description='Eindeutige Id des Eintrags als Text, zum Beispiel "1". Vergibt der Server. Sie steht im Pfad `/game-histories/{history_id}`.',
+            examples=["1"],
+        ),
+    ]
+    player_a: Annotated[
+        str,
+        Field(
+            description="Name der Person, die X gespielt hat und begann.",
+            examples=["Ada"],
+        ),
+    ]
+    player_b: Annotated[
+        str,
+        Field(
+            description="Name der Person, die O gespielt hat.",
+            examples=["Cleo"],
+        ),
+    ]
+    game: Annotated[
+        list[str],
+        Field(
+            description='Das Brett am Ende, genau neun Felder, Zeile für Zeile (Index 0 bis 2 erste Zeile, 3 bis 5 zweite, 6 bis 8 dritte). Ein Feld ist "" (leer), "X" oder "O".',
+            examples=[["X", "O", "O", "", "X", "", "", "", "X"]],
+        ),
+    ]
+    winner: Annotated[
+        str,
+        Field(
+            description='Name des Siegers (`player_a` oder `player_b`) oder "draw" bei einem Unentschieden.',
+            examples=["Ada"],
+        ),
+    ]
