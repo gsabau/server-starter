@@ -9,7 +9,7 @@ def load_fixtures(user_service, profile_service, history_service) -> None:
     dan = user_service.create_user("Dan")
 
     for user in (ada, ben, cleo, dan):
-        profile_service.create_profile(user.id, user.name)
+        profile_service.create_profile(user.id, user.name, "", "")
 
     # Ada (X) vs Cleo (O). X wins on 0, 4, 8.
     history_service.create_history(

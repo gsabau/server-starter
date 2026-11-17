@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import Field
 
@@ -63,6 +63,20 @@ class ProfileCreate:
             examples=["Ada"],
         ),
     ]
+    bio: Annotated[
+        str,
+        Field(
+            description="User Bio.",
+            examples=["Bio"],
+        ),
+    ]
+    hobbies: Annotated[
+        list,
+        Field(
+            description="Honies.",
+            examples=["Honnies"],
+        ),
+    ]
 
 
 @dataclass
@@ -88,6 +102,20 @@ class ProfileResponse:
         Field(
             description="Name, den die App am Sitzplatz anzeigt.",
             examples=["Ada"],
+        ),
+    ]
+    bio: Annotated[
+        str,
+        Field(
+            description="User Bio",
+            examples=["Ada"],
+        ),
+    ]
+    hobbies: Annotated[
+        list,
+        Field(
+            description="User Hobbies",
+            examples=["Running"],
         ),
     ]
 
@@ -163,5 +191,38 @@ class GameHistoryResponse:
         Field(
             description='Name des Siegers (`player_a` oder `player_b`) oder "draw" bei einem Unentschieden.',
             examples=["Ada"],
+        ),
+    ]
+
+
+@dataclass
+class ComputerMoveRequest:
+    """Anfrage nach dem nächsten Zug des Computers. Das Brett ist der aktuelle Stand, mitten im Spiel. Der Server speichert nichts."""
+
+    game: Annotated[
+        list[str],
+        Field(
+            description='Das aktuelle Brett, genau neun Felder, Zeile für Zeile: Index 0 bis 2 ist die erste Zeile, 3 bis 5 die zweite, 6 bis 8 die dritte. Ein Feld ist "" (leer), "X" oder "O".',
+            examples=[["X", "O", "", "", "X", "", "", "", "O"]],
+        ),
+    ]
+    mark: Annotated[
+        Literal["X", "O"],
+        Field(
+            description='Das Zeichen des Computers, "X" oder "O". Der Computer setzt dieses Zeichen auf ein freies Feld.',
+            examples=["O"],
+        ),
+    ]
+
+
+@dataclass
+class ComputerMoveResponse:
+    """Der Zug, den der Computer gewählt hat. Die App setzt das Zeichen selbst auf dieses Feld."""
+
+    position: Annotated[
+        int,
+        Field(
+            description="Das gewählte Feld, eine ganze Zahl von 0 bis 8, Zeile für Zeile. Das Feld ist im geschickten Brett frei.",
+            examples=[2],
         ),
     ]

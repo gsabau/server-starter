@@ -8,8 +8,8 @@ class ProfileRepository:
         self._profiles: dict[int, Profile] = {}
         self._next_id = 1
 
-    def add(self, user_id: int, display_name: str) -> Profile:
-        profile = Profile(id=self._next_id, user_id=user_id, display_name=display_name)
+    def add(self, user_id: int, display_name: str, bio: str, hobbies: list) -> Profile:
+        profile = Profile(id=self._next_id, user_id=user_id, display_name=display_name, bio=bio, hobbies=hobbies)
         self._profiles[profile.id] = profile
         self._next_id += 1
         return profile

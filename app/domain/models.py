@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-
 # Rows the repositories store. The dict stands in for the database.
 # A dataclass, fields only.
 
@@ -18,6 +17,8 @@ class Profile:
     id: int
     user_id: int
     display_name: str
+    bio: str
+    hobbies: []
 
 
 @dataclass

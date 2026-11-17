@@ -18,12 +18,12 @@ class ProfileService:
         self._profiles = profiles
         self._users = users
 
-    def create_profile(self, user_id: int, display_name: str) -> Profile:
+    def create_profile(self, user_id: int, display_name: str, bio: str, hobbies : list[Profile]) -> Profile:
         if self._users.get(user_id) is None:
             raise UnknownUserError
         if self._profiles.find_by_user(user_id) is not None:
             raise ProfileExistsError
-        return self._profiles.add(user_id, display_name)
+        return self._profiles.add(user_id, display_name, bio, hobbies)
 
     def list_profiles(self) -> list[Profile]:
         return self._profiles.list_all()

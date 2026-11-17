@@ -10,7 +10,7 @@ def build_router(service: ProfileService) -> APIRouter:
 
     @router.post("", status_code=201)
     def create_profile(body: ProfileCreate) -> ProfileResponse:
-        return _to_response(_run(lambda: service.create_profile(body.user_id, body.display_name)))
+        return _to_response(_run(lambda: service.create_profile(body.user_id, body.display_name, body.bio, body.hobbies)))
 
     @router.get("")
     def list_profiles() -> list[ProfileResponse]:
@@ -33,4 +33,6 @@ def _to_response(profile: Profile) -> ProfileResponse:
         id=profile.id,
         user_id=profile.user_id,
         display_name=profile.display_name,
+        bio=profile.bio,
+        hobbies=profile.hobbies
     )

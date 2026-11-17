@@ -67,6 +67,60 @@ Beim Start lädt `main.py` `load_fixtures` aus `app/fixtures.py` in dieselben Di
 
 `GET /users`, `GET /profiles`, `GET /game-histories` und `GET /game-histories/1` liefern diese Menge. Ein `POST` hängt dahinter an. Der nächste User ist die Id 5, der nächste Verlauf die Id `"4"`.
 
+## Computer-Gegner
+
+Ein Agent mit einem Sprachmodell (Ollama, Pydantic AI) wählt den nächsten Zug. Die App schickt das Brett, der Server antwortet mit dem Feld. Es wird nichts gespeichert.
+
+| Aufruf | Antwort |
+|---|---|
+| `POST /computer-moves` | **200** `ComputerMoveResponse` mit `position` (0 bis 8). Body `ComputerMoveRequest` (nicht `Create`: der Server legt nichts an, er beantwortet eine Frage): `game` (neun Felder) und `mark` (`"X"` oder `"O"`, das Zeichen des Computers). Die App schickt immer ein Brett mit neun Feldern. Der Server prüft das Brett nicht und hat keine eigenen Fehlercodes. |
+
+```json
+{"game": ["X", "O", "", "", "X", "", "", "", "O"], "mark": "O"}
+```
+
+Die Route ist `async`, weil der Agent auf das Sprachmodell wartet. Der Server bleibt in dieser Zeit frei.
+
+Die Dateien stehen in `app/computer_moves/`:
+
+| Datei | Aufgabe |
+|---|---|
+| `tools.py` | Die Funktionsaufrufe (Function Calls) des Agenten. **Hier erweiterst du.** |
+| `agent.py` | `SYSTEM_PROMPT` (wer der Agent ist) und `create_game_agent()` (Modell aus der Umgebung, Standard `llama3.2`). |
+| `service.py` | Startet den Agenten (höchstens 6 Modellaufrufe pro Zug) und gibt das Feld zurück, das der Funktionsaufruf gesetzt hat. |
+| `router.py` | Die Route `POST /computer-moves`. |
+
+Der Zug kommt vom Funktionsaufruf `place_computer_mark`, nie aus dem Text des Modells. Ist das Feld belegt, meldet die Funktion den Fehler und die freien Felder. Das Modell versucht es dann noch einmal.
+
+### Ein Funktionsaufruf, der gut gebaut ist
+
+Das Modell sieht nie den Python-Code. Es bekommt ein Schema aus drei Dingen: Funktionsname, Parameter und Docstring. Daran entscheidet es, ob und womit es die Funktion aufruft.
+
+- **Name:** Verb und Objekt, was die Funktion tut. `place_computer_mark`, nicht `do_it` oder `move2`.
+- **Parameter:** wenige, mit klarem Typ und Namen. `position: int`.
+- **Docstring:** wofür die Funktion da ist und wann man sie nutzt. Nicht, wie sie es macht. Jeder Parameter mit Bedeutung und Wertebereich.
+
+```python
+def place_computer_mark(ctx: RunContext[GameContext], position: int) -> str:
+    """Place the computer's mark on one free cell of the board. Use this to make the computer's move.
+
+    position: the cell, a whole number from 0 to 8. 0 to 2 is the top row, 3 to 5 the middle row, 6 to 8 the bottom row.
+    """
+```
+
+### Einen weiteren Funktionsaufruf ergänzen
+
+1. Eine Funktion in `app/computer_moves/tools.py` schreiben, mit `ctx: RunContext[GameContext]` als erstem Parameter. `ctx.deps` ist der `GameContext` dieses Zugs: `board`, `mark` und `move`.
+2. Sie in die Liste `TOOLS` am Ende der Datei eintragen.
+
+Eine normale `def`-Funktion reicht. `async def` brauchst du nur, wenn die Funktion selbst auf etwas Langsames wartet (HTTP-Aufruf, Datenbank). Die Route und `choose_move` sind `async`, weil sie auf das Sprachmodell warten. `place_computer_mark` wartet auf nichts.
+
+Sonst ändert sich nichts. Ideen: `list_free_positions`, `find_winning_position`, `find_blocking_position`. Das sind Hilfen, die nur lesen. Das Modell ruft sie vor `place_computer_mark` auf. Probiere, was ein anderer Name oder ein anderer Docstring ändert.
+
+### Modell
+
+Ollama muss laufen und das Modell geladen sein (`ollama pull llama3.2`). Ohne Datei `.env` nimmt der Server `llama3.2`. Ein anderes Modell: `.env.example` nach `.env` kopieren und `MODEL_NAME` ändern. `main.py` lädt die Datei einmal beim Start mit `load_dotenv()`, danach liest `create_game_agent()` die Werte aus der Umgebung. Echte Umgebungsvariablen haben Vorrang vor der Datei. Kleine Modelle spielen nicht gut Tic-Tac-Toe: sie wählen belegte Felder oder übersehen einen Gewinnzug. Genau deshalb prüft die Funktion jeden Zug.
+
 ## Requirements
 
 Python 3.14.
@@ -75,6 +129,8 @@ Direkte Abhängigkeiten, Versionen aus der `.venv` dieses Projekts:
 
 - `fastapi` 0.142.2
 - `uvicorn` 0.54.0
+- `pydantic-ai-slim[openai]` 2.69.0
+- `python-dotenv` 1.2.4
 
 Die Namen stehen in `requirements.txt`.
 
