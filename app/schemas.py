@@ -66,15 +66,15 @@ class ProfileCreate:
     bio: Annotated[
         str,
         Field(
-            description="User Bio.",
-            examples=["Bio"],
+            description="Kurzer Text zum Account. Darf leer sein.",
+            examples=["Spielt gerne."],
         ),
     ]
     hobbies: Annotated[
-        list,
+        list[str],
         Field(
-            description="Honies.",
-            examples=["Honnies"],
+            description="Hobbys als Liste von Texten. Darf leer sein.",
+            examples=[["Schach"]],
         ),
     ]
 
@@ -107,15 +107,15 @@ class ProfileResponse:
     bio: Annotated[
         str,
         Field(
-            description="User Bio",
-            examples=["Ada"],
+            description="Kurzer Text zum Account. Darf leer sein.",
+            examples=["Spielt gerne."],
         ),
     ]
     hobbies: Annotated[
-        list,
+        list[str],
         Field(
-            description="User Hobbies",
-            examples=["Running"],
+            description="Hobbys als Liste von Texten. Darf leer sein.",
+            examples=[["Schach"]],
         ),
     ]
 
@@ -226,3 +226,30 @@ class ComputerMoveResponse:
             examples=[2],
         ),
     ]
+
+
+@dataclass
+class ComputerChatRequest:
+    """Frage oder Nachricht an den Chat-Agenten rund um das Spiel. Der Server speichert nichts."""
+
+    text: Annotated[
+        str,
+        Field(
+            description="Frage oder Text an den Chat-Agenten, zum Beispiel zu Spielregeln, Spielern, Profilen oder Highscores.",
+            examples=["Welche Spieler gibt es?"],
+        ),
+    ]
+
+
+@dataclass
+class ComputerChatResponse:
+    """Antwort des Chat-Agenten als Text."""
+
+    reply: Annotated[
+        str,
+        Field(
+            description="Antwort des Chat-Agenten auf die gestellte Frage.",
+            examples=["Aktuell sind Ada, Ben, Cleo und Dan registriert."],
+        ),
+    ]
+

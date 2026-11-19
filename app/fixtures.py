@@ -8,8 +8,18 @@ def load_fixtures(user_service, profile_service, history_service) -> None:
     cleo = user_service.create_user("Cleo")
     dan = user_service.create_user("Dan")
 
-    for user in (ada, ben, cleo, dan):
-        profile_service.create_profile(user.id, user.name, "", "")
+    profile_service.create_profile(
+        ada.id, "Ada", "Plays the center square whenever it is free.", ["chess", "coding", "puzzles"]
+    )
+    profile_service.create_profile(
+        ben.id, "Ben", "Prefers defensive play and aims for a draw.", ["music", "gaming", "cycling"]
+    )
+    profile_service.create_profile(
+        cleo.id, "Cleo", "Fast player who always starts in a corner.", ["reading", "chess", "hiking"]
+    )
+    profile_service.create_profile(
+        dan.id, "Dan", "New to Tic-Tac-Toe, learning opening traps.", ["cooking", "movies"]
+    )
 
     # Ada (X) vs Cleo (O). X wins on 0, 4, 8.
     history_service.create_history(

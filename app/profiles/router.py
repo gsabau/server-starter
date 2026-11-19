@@ -34,5 +34,5 @@ def _to_response(profile: Profile) -> ProfileResponse:
         user_id=profile.user_id,
         display_name=profile.display_name,
         bio=profile.bio,
-        hobbies=profile.hobbies
+        hobbies=list(profile.hobbies),
     )

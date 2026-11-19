@@ -18,7 +18,7 @@ class Profile:
     user_id: int
     display_name: str
     bio: str
-    hobbies: []
+    hobbies: list[str]
 
 
 @dataclass

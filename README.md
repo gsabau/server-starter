@@ -87,10 +87,19 @@ Die Dateien stehen in `app/computer_moves/`:
 |---|---|
 | `tools.py` | Die Funktionsaufrufe (Function Calls) des Agenten. **Hier erweiterst du.** |
 | `agent.py` | `SYSTEM_PROMPT` (wer der Agent ist) und `create_game_agent()` (Modell aus der Umgebung, Standard `llama3.2`). |
-| `service.py` | Startet den Agenten (höchstens 6 Modellaufrufe pro Zug) und gibt das Feld zurück, das der Funktionsaufruf gesetzt hat. |
+| `service.py` | Startet den Agenten (höchstens 6 Modellaufrufe pro Zug) und gibt das Feld zurück, das der Funktionsaufruf gesetzt hat. Schreibt jeden Funktionsaufruf ins Terminal. |
 | `router.py` | Die Route `POST /computer-moves`. |
 
 Der Zug kommt vom Funktionsaufruf `place_computer_mark`, nie aus dem Text des Modells. Ist das Feld belegt, meldet die Funktion den Fehler und die freien Felder. Das Modell versucht es dann noch einmal.
+
+Das Terminal zeigt jeden Funktionsaufruf, auch einen, den du in `tools.py` ergänzt. `main.py` schaltet das Logging einmal ein. Ein Zug sieht so aus:
+
+```text
+INFO app.computer_moves: choose_move mark=O
+INFO app.computer_moves: tool call place_computer_mark {'position': 2}
+INFO app.computer_moves: tool result place_computer_mark: Placed O at position 2.
+INFO app.computer_moves: choose_move position=2
+```
 
 ### Ein Funktionsaufruf, der gut gebaut ist
 
@@ -115,7 +124,7 @@ def place_computer_mark(ctx: RunContext[GameContext], position: int) -> str:
 
 Eine normale `def`-Funktion reicht. `async def` brauchst du nur, wenn die Funktion selbst auf etwas Langsames wartet (HTTP-Aufruf, Datenbank). Die Route und `choose_move` sind `async`, weil sie auf das Sprachmodell warten. `place_computer_mark` wartet auf nichts.
 
-Sonst ändert sich nichts. Ideen: `list_free_positions`, `find_winning_position`, `find_blocking_position`. Das sind Hilfen, die nur lesen. Das Modell ruft sie vor `place_computer_mark` auf. Probiere, was ein anderer Name oder ein anderer Docstring ändert.
+Sonst ändert sich nichts. Der Aufruf erscheint von selbst im Terminal. Ideen: `list_free_positions`, `find_winning_position`, `find_blocking_position`. Das sind Hilfen, die nur lesen. Das Modell ruft sie vor `place_computer_mark` auf. Probiere, was ein anderer Name oder ein anderer Docstring ändert.
 
 ### Modell
 
